@@ -116,16 +116,11 @@ Create a file named `animation.py`:
 
 ```python
 def draw(x: int, y: int, glyph: str, fg_color: tuple = None, bg_color: tuple = None):
-    args = []
-    args.append(f"x={x}") if x is not None else ()
-    args.append(f"y={y}") if y is not None else ()
-    if len(glyph) > 1:
-        args.append(f"glyph=\"{glyph}\"") if glyph else ()
-    elif len(glyph) == 1 :
-        args.append(f"glyph='{glyph}'") if glyph else ()
-    args.append(f"fg_color={fg_color}") if fg_color is not None else ()
-    args.append(f"bg_color={bg_color}") if bg_color is not None else ()
-
+    g_str = f'"{glyph}"' if len(glyph) > 1 else f"'{glyph}'"
+    params = {"x": x, "y": y, "glyph": g_str, "fg_color": fg_color, "bg_color": bg_color}
+    
+    args = [f"{k}={v}" for k, v in params.items() if v is not None]
+    
     print(f"Draw({','.join(args)})")
 
 flush = lambda: print("Flush()")
