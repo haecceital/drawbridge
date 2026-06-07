@@ -6,6 +6,7 @@ mod process;
 use display::DisplayServer;
 use parser::Parser;
 use process::ProcessBridge;
+use cmd::Cmd;
 
 fn main() {
     let mut bridge = ProcessBridge::from_args().unwrap_or_else(|e| {
@@ -16,7 +17,7 @@ fn main() {
     let mut parser = Parser::new();
     let mut server = DisplayServer::new();
 
-    let resize_rx = match bridge.start_event_loop() {
+    let (resize_rx, query_tx) = match bridge.start_event_loop() {
         Ok(r) => r,
         Err(e) => {
             drop(server);
@@ -37,7 +38,15 @@ fn main() {
         match parser.parse_line(&line) {
             Ok(cmds) => {
                 for cmd in cmds {
-                    server.execute(cmd);
+                    match cmd {
+                        Cmd::QuerySize => {
+                            let (w, h) = server.get_size();
+                            if query_tx.send(format!("Size|{}|{}\n", w, h)).is_err() {
+                                break;
+                            }
+                        }
+                        _ => server.execute(cmd),
+                    }
                 }
             }
             Err(e) => {

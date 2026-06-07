@@ -1,8 +1,10 @@
 use std::env;
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Child, Command, Stdio};
-use std::sync::mpsc::{self, Receiver};
+use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
+use std::time::Duration;
+use crossterm::event;
 
 pub struct ProcessBridge {
     child: Child,
@@ -52,39 +54,49 @@ impl ProcessBridge {
         Ok(Self { child, stderr })
     }
 
-    pub fn start_event_loop(&mut self) -> Result<Receiver<(u16, u16)>, String> {
+    pub fn start_event_loop(&mut self) -> Result<(Receiver<(u16, u16)>, Sender<String>), String> {
         let mut child_stdin = self
             .child
             .stdin
             .take()
             .ok_or("Failed to open stdin".to_string())?;
-        let (resize_tx, resize_rx) = mpsc::channel();
+        let (resize_tx, resize_rx) = mpsc::channel::<(u16, u16)>();
+        let (query_tx, query_rx) = mpsc::channel::<String>();
 
         thread::spawn(move || {
             loop {
-                if let Ok(event) = crossterm::event::read() {
-                    let msg = match event {
-                        crossterm::event::Event::Key(key_event) => {
-                            format!("Key|{:?}|{:?}\n", key_event.code, key_event.modifiers)
-                        }
-                        crossterm::event::Event::Resize(w, h) => {
-                            if resize_tx.send((w, h)).is_err() {
-                                break;
-                            }
-                            format!("Resize|{}|{}\n", w, h)
-                        }
-                        _ => continue,
-                    };
-
+                if let Ok(msg) = query_rx.try_recv() {
                     if child_stdin.write_all(msg.as_bytes()).is_err() {
                         break;
                     }
                     let _ = child_stdin.flush();
                 }
+
+                if event::poll(Duration::from_millis(10)).unwrap() {
+                    if let Ok(event) = crossterm::event::read() {
+                        let msg = match event {
+                            crossterm::event::Event::Key(key_event) => {
+                                format!("Key|{:?}|{:?}\n", key_event.code, key_event.modifiers)
+                            }
+                            crossterm::event::Event::Resize(w, h) => {
+                                if resize_tx.send((w, h)).is_err() {
+                                    break;
+                                }
+                                format!("Resize|{}|{}\n", w, h)
+                            }
+                            _ => continue,
+                        };
+
+                        if child_stdin.write_all(msg.as_bytes()).is_err() {
+                            break;
+                        }
+                        let _ = child_stdin.flush();
+                    }
+                }
             }
         });
 
-        Ok(resize_rx)
+        Ok((resize_rx, query_tx))
     }
 
     pub fn lines(&mut self) -> impl Iterator<Item = String> {

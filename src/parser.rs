@@ -362,6 +362,7 @@ impl Parser {
                 "Draw" => self.parse_draw(&mut cmds, &mut tokenizer)?,
                 "Clear" => self.parse_clear(&mut cmds, &mut tokenizer)?,
                 "Flush" => self.parse_flush(&mut cmds, &mut tokenizer)?,
+                "QuerySize" => self.parse_query_size(&mut cmds, &mut tokenizer)?,
                 _ => return Err(format!("Syntax Error: Unknown command '{}'.", cmd_name)),
             }
         }
@@ -458,6 +459,13 @@ impl Parser {
         let _arg_content = ArgsContext::parse(&[], tokenizer)?;
 
         cmds.push(Cmd::Clear);
+        Ok(())
+    }
+
+    fn parse_query_size(&mut self, cmds: &mut Vec<Cmd>, tokenizer: &mut Tokenizer) -> Error<()> {
+        let _arg_content = ArgsContext::parse(&[], tokenizer)?;
+
+        cmds.push(Cmd::QuerySize);
         Ok(())
     }
 }

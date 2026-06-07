@@ -24,6 +24,18 @@ A language-agnostic, lightweight TUI (Terminal User Interface) rendering engine 
 
 ---
 
+## Critical: Output Buffering & Flushing
+
+Since your script runs inside an OS pipe rather than directly on a terminal screen, **most programming languages will heavily buffer their `stdout`**. This means your commands might not reach `drawbridge` immediately, causing the terminal UI to freeze or lag.
+
+Although `drawbridge` automatically injects environment variables (like `PYTHONUNBUFFERED=1`) to disable buffering for popular runtimes, **you should always explicitly flush your stdout after sending a batch of commands (especially after `Flush()` or `QuerySize()`)**.
+
+### How to properly flush in various languages:
+* **Python:** `print("Flush()", flush=True)` or `sys.stdout.flush()`
+* **C++:** `std::cout << "Flush()\n" << std::flush;`
+* **Rust (Child):** `println!("Flush()"); std::io::stdout().flush().unwrap();`
+---
+
 ## Installation
 
 ### Prerequisites
@@ -91,6 +103,20 @@ Clears the temporary drawing canvas buffer.
 Renders all buffered drawing operations onto the actual terminal screen.
 * **Syntax:** `Flush()`
 
+### 4. `QuerySize()`
+Requests the current terminal window dimensions (columns and rows) from `drawbridge`.
+
+* **Syntax:** `QuerySize()`
+
+**Important: Request-Response Protocol**
+Unlike rendering commands, `QuerySize()` requires a synchronous read from your script. Once your script outputs `QuerySize()`, **you must immediately read one line from standard input (`stdin`)** to capture the response.
+
+#### Response Format
+`drawbridge` will instantly write the response to your script's `stdin` in the following format (ending with a newline `\n`):
+```text
+Size|<WIDTH>|<HEIGHT>
+```
+
 ---
 
 ## Event Protocol (Stdin)
@@ -123,7 +149,7 @@ def draw(x: int, y: int, glyph: str, fg_color: tuple = None, bg_color: tuple = N
     
     print(f"Draw({','.join(args)})")
 
-flush = lambda: print("Flush()")
+flush = lambda: print("Flush()", flush = True)
 clear = lambda b: (b and print("Clear()")) or True
 
 def main():

@@ -169,6 +169,10 @@ impl DisplayServer {
             .copy_from_slice(&self.next_canvas.buffer);
     }
 
+    pub fn get_size(&mut self) -> (u16, u16) {
+        (self.current_canvas.width, self.current_canvas.height)
+    }
+
     pub fn resize(&mut self, new_width: u16, new_height: u16) {
         let new_size = (new_width * new_height) as usize;
 
@@ -207,6 +211,7 @@ impl DisplayServer {
             Cmd::Draw(cell_update) => self.draw(cell_update),
             Cmd::Clear => self.clear(),
             Cmd::Flush => self.flush(),
+            Cmd::QuerySize => (),
         }
     }
 }

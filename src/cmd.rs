@@ -35,4 +35,5 @@ pub enum Cmd {
     Draw(CellUpdate),
     Clear,
     Flush,
+    QuerySize,
 }
