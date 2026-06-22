@@ -3,10 +3,10 @@ mod display;
 mod parser;
 mod process;
 
+use cmd::Cmd;
 use display::DisplayServer;
 use parser::Parser;
 use process::ProcessBridge;
-use cmd::Cmd;
 
 fn main() {
     let mut bridge = ProcessBridge::from_args().unwrap_or_else(|e| {
@@ -64,7 +64,7 @@ fn main() {
     if let Some(mut stderr) = child_stderr {
         let mut err_msg = String::new();
         if std::io::Read::read_to_string(&mut stderr, &mut err_msg).is_ok() && !err_msg.is_empty() {
-            eprintln!("\x1b[31;1m--- Python Runtime Error Traceback ---\x1b[0m");
+            eprintln!("\x1b[31;1m--- Child Process Runtime Error Traceback ---\x1b[0m");
             eprintln!("{}", err_msg);
             eprintln!("\x1b[31;1m--------------------------------------\x1b[0m");
         }

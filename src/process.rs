@@ -1,10 +1,10 @@
+use crossterm::event;
 use std::env;
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use std::time::Duration;
-use crossterm::event;
 
 pub struct ProcessBridge {
     child: Child,
@@ -72,26 +72,26 @@ impl ProcessBridge {
                     let _ = child_stdin.flush();
                 }
 
-                if event::poll(Duration::from_millis(10)).unwrap() {
-                    if let Ok(event) = crossterm::event::read() {
-                        let msg = match event {
-                            crossterm::event::Event::Key(key_event) => {
-                                format!("Key|{:?}|{:?}\n", key_event.code, key_event.modifiers)
-                            }
-                            crossterm::event::Event::Resize(w, h) => {
-                                if resize_tx.send((w, h)).is_err() {
-                                    break;
-                                }
-                                format!("Resize|{}|{}\n", w, h)
-                            }
-                            _ => continue,
-                        };
-
-                        if child_stdin.write_all(msg.as_bytes()).is_err() {
-                            break;
+                if event::poll(Duration::from_millis(10)).unwrap()
+                    && let Ok(event) = crossterm::event::read()
+                {
+                    let msg = match event {
+                        crossterm::event::Event::Key(key_event) => {
+                            format!("Key|{:?}|{:?}\n", key_event.code, key_event.modifiers)
                         }
-                        let _ = child_stdin.flush();
+                        crossterm::event::Event::Resize(w, h) => {
+                            if resize_tx.send((w, h)).is_err() {
+                                break;
+                            }
+                            format!("Resize|{}|{}\n", w, h)
+                        }
+                        _ => continue,
+                    };
+
+                    if child_stdin.write_all(msg.as_bytes()).is_err() {
+                        break;
                     }
+                    let _ = child_stdin.flush();
                 }
             }
         });
